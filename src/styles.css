@@ -1,0 +1,1432 @@
+/* ──────────────────────────────────────────────────────────────────────────
+ * SolOS / TrueShadow
+ * Every elevated surface in the UI consumes the environmental tokens defined
+ * on .app. Registered custom properties allow them to interpolate over time.
+ * Style tokens (corner radius, gloss, pillow, etc.) are user preferences
+ * with no environmental coupling.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+@property --shadow-x       { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --shadow-y       { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --shadow-blur    { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --shadow-opacity { syntax: "<number>"; inherits: true; initial-value: 0.25; }
+@property --shadow-tint    { syntax: "<color>";  inherits: true; initial-value: #1a1410; }
+@property --surface-warmth { syntax: "<number>"; inherits: true; initial-value: 0.5; }
+@property --surface-tint   { syntax: "<color>";  inherits: true; initial-value: #e7d5b9; }
+@property --background-start    { syntax: "<color>"; inherits: true; initial-value: #a4c2dd; }
+@property --background-end      { syntax: "<color>"; inherits: true; initial-value: #f3c89a; }
+@property --background-horizon  { syntax: "<color>"; inherits: true; initial-value: #fadcb0; }
+@property --highlight-opacity { syntax: "<number>"; inherits: true; initial-value: 0.4; }
+@property --ambient-contrast  { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --glow              { syntax: "<number>"; inherits: true; initial-value: 0.5; }
+@property --sun-x { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
+@property --sun-y { syntax: "<percentage>"; inherits: true; initial-value: 60%; }
+@property --depth-px    { syntax: "<length>"; inherits: true; initial-value: 5px; }
+@property --depth-dir-x { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --depth-dir-y { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --depth-scale { syntax: "<number>"; inherits: true; initial-value: 0.45; }
+@property --slab-offset { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --gaze-enabled { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --gaze-disc-x  { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
+@property --gaze-disc-y  { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
+@property --gaze-dir-x   { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --gaze-dir-y   { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --shadow-spread      { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --shadow-contact-mul { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --shadow-reach-mul   { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --shadow-distance-drop { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --floating-mul       { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --sun-gaze           { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+/* Style tokens — user preferences, no environmental coupling. */
+@property --corner-radius   { syntax: "<number>"; inherits: true; initial-value: 1.1; }
+@property --highlight-mul   { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --gloss           { syntax: "<number>"; inherits: true; initial-value: 0.22; }
+@property --surface-opacity { syntax: "<number>"; inherits: true; initial-value: 88; }
+@property --pillow          { syntax: "<number>"; inherits: true; initial-value: 40; }
+@property --saturation      { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --tile-gap        { syntax: "<length>"; inherits: true; initial-value: 14px; }
+@property --wallpaper-warm  { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --bezel-sheen     { syntax: "<number>"; inherits: true; initial-value: 0.6; }
+@property --glyph-weight    { syntax: "<number>"; inherits: true; initial-value: 1; }
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  color: #1a1410;
+  background: #06070b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.app {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  isolation: isolate;
+  overflow: hidden;
+  /* Smooth environmental transitions across the entire scene. */
+  transition:
+    --shadow-x 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --shadow-y 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --shadow-blur 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --shadow-opacity 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --shadow-tint 1200ms ease,
+    --surface-warmth 1200ms ease,
+    --surface-tint 1200ms ease,
+    --background-start 1200ms ease,
+    --background-end 1200ms ease,
+    --background-horizon 1200ms ease,
+    --highlight-opacity 800ms ease,
+    --ambient-contrast 800ms ease,
+    --glow 800ms ease,
+    --sun-x 1000ms cubic-bezier(0.4, 0, 0.4, 1),
+    --sun-y 1000ms cubic-bezier(0.4, 0, 0.4, 1),
+    --depth-px 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --depth-dir-x 700ms ease,
+    --depth-dir-y 700ms ease,
+    --depth-scale 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --slab-offset 600ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --gaze-dir-x 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --gaze-dir-y 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --shadow-spread 500ms ease,
+    --shadow-contact-mul 500ms ease,
+    --shadow-reach-mul 500ms ease,
+    --shadow-distance-drop 500ms ease,
+    --floating-mul 500ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --sun-gaze 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    --corner-radius 400ms ease,
+    --highlight-mul 400ms ease,
+    --gloss 400ms ease,
+    --surface-opacity 400ms ease,
+    --pillow 400ms ease,
+    --saturation 400ms ease,
+    --tile-gap 400ms ease,
+    --wallpaper-warm 400ms ease,
+    --bezel-sheen 400ms ease,
+    --glyph-weight 400ms ease;
+}
+
+/* ── Sky ───────────────────────────────────────────────────────────────── */
+
+.sky {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      120% 70% at var(--sun-x) calc(var(--sun-y) + 4%),
+      color-mix(in srgb, var(--background-horizon) calc(var(--glow) * 100%), transparent) 0%,
+      transparent 55%
+    ),
+    linear-gradient(
+      to bottom,
+      var(--background-start) 0%,
+      color-mix(in srgb, var(--background-start), var(--background-end) 45%) 55%,
+      var(--background-end) 100%
+    );
+  transition: background 1200ms ease;
+}
+
+.sky-haze {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      80% 50% at var(--sun-x) var(--sun-y),
+      rgba(255, 240, 220, calc(0.18 * var(--glow))) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 60%,
+      color-mix(in srgb, var(--background-horizon), transparent 40%) 92%,
+      color-mix(in srgb, var(--background-end), transparent 30%) 100%
+    );
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* The implicit time-of-day sun disc is hidden — the warm radial gradient in
+ * .sky and .sky-haze covers the atmospheric brightening near the sun. The
+ * user opts into a directly-positioned sun (or moon) via the gaze toggle. */
+.sun-disc { display: none; }
+
+/* Gaze disc — visible only when Sun/Moon gaze is enabled. Position comes
+ * from the gaze position slider (mapped to the sky arc); colour comes from
+ * the mode (warm sun vs. cool moon). */
+.gaze-disc {
+  position: absolute;
+  left: var(--gaze-disc-x);
+  top: var(--gaze-disc-y);
+  width: 96px;
+  height: 96px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(0.5px);
+  z-index: 0;
+  animation: gaze-fade-in 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: left 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    top 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes gaze-fade-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.gaze-disc--sun {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 250, 230, 0.96) 0%,
+    rgba(255, 220, 160, 0.65) 18%,
+    rgba(255, 190, 110, 0.30) 38%,
+    rgba(255, 170, 90, 0.10) 55%,
+    transparent 75%
+  );
+  box-shadow: 0 0 60px 8px rgba(255, 200, 130, 0.25);
+}
+.gaze-disc--moon {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(248, 250, 255, 0.95) 0%,
+    rgba(220, 230, 248, 0.60) 22%,
+    rgba(170, 195, 230, 0.22) 45%,
+    transparent 75%
+  );
+  box-shadow: 0 0 50px 4px rgba(180, 200, 240, 0.20);
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+
+.layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(360px, 460px);
+  /* Lock the row to the viewport — keeps the phone vertically stable when
+   * the panel's content grows. The panel will fill this row and scroll its
+   * own overflow rather than pushing the row taller. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 64px;
+  align-items: center;
+  padding: 56px 72px;
+  height: 100vh;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+    min-height: 100vh;
+    gap: 40px;
+    padding: 80px 28px 40px;
+  }
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 720px;
+  perspective: 2400px;
+}
+
+.ground {
+  position: absolute;
+  bottom: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110%;
+  height: 220px;
+  background: radial-gradient(
+    50% 80% at 50% 0%,
+    color-mix(in srgb, var(--background-end), transparent 30%) 0%,
+    transparent 75%
+  );
+  pointer-events: none;
+  filter: blur(20px);
+  opacity: calc(0.35 + var(--ambient-contrast) * 0.25);
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+.phone-wrap {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.phone {
+  position: relative;
+  width: 340px;
+  height: 700px;
+  border-radius: 56px;
+  background:
+    linear-gradient(135deg, #2a2c33 0%, #15161a 50%, #2a2c33 100%);
+  padding: 8px;
+  transition: transform 600ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-style: preserve-3d;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, calc(0.12 * var(--ambient-contrast))) inset,
+    calc(var(--shadow-x) * 1.6) calc(var(--shadow-y) * 2.0 + 10px) calc(var(--shadow-blur) * 1.5 + 30px)
+      color-mix(in srgb, var(--shadow-tint), transparent calc(100% - var(--shadow-opacity) * 80%)),
+    calc(var(--shadow-x) * 0.5) calc(var(--shadow-y) * 0.7 + 4px) calc(var(--shadow-blur) * 0.6)
+      color-mix(in srgb, var(--shadow-tint), transparent calc(100% - var(--shadow-opacity) * 60%));
+}
+
+.phone-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 48px;
+  overflow: hidden;
+  background: #0a0b0e;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(60, 60, 65, 0.85),
+    inset 0 0 0 3.5px rgba(0, 0, 0, 0.75);
+}
+
+.phone-bezel-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 48px;
+  background: linear-gradient(
+    calc(180deg + (var(--sun-x) - 50%) * 1.5),
+    rgba(255, 255, 255, calc(0.08 * var(--ambient-contrast) * var(--bezel-sheen))) 0%,
+    transparent 25%,
+    transparent 75%,
+    rgba(0, 0, 0, calc(0.18 * var(--bezel-sheen))) 100%
+  );
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 5;
+}
+
+.phone-side {
+  position: absolute;
+  width: 4px;
+  height: 80px;
+  background: linear-gradient(to bottom, #1f2126, #0e0f12);
+  border-radius: 2px;
+  z-index: -1;
+}
+.phone-side--left  { left: -2px; top: 110px; height: 50px; }
+.phone-side--left::after  { content: ""; position: absolute; left: 0; top: 60px; width: 4px; height: 90px; background: inherit; border-radius: 2px; }
+.phone-side--right { right: -2px; top: 130px; height: 70px; }
+
+/* The on-screen surface — this is where TrueShadow lives. */
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 38px;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background-start), white 25%) 0%,
+    color-mix(in srgb, var(--background-horizon), white 35%) 60%,
+    color-mix(in srgb, var(--background-end), white 30%) 100%
+  );
+  transition: background 1200ms ease;
+}
+
+/* Wallpaper warm light direction — inside of phone faintly knows where the
+ * sun is. Plus an optional warmth-offset overlay driven by the style slider.
+ */
+.screen-wallpaper {
+  position: absolute;
+  inset: 0;
+  background:
+    /* Sun-gaze flare — only visible when the phone is held up toward the
+     * sun. Warm wash from the upper-left where the sun would be relative
+     * to the user's perspective. */
+    radial-gradient(
+      90% 70% at 28% 22%,
+      hsla(40, 100%, 92%, calc(var(--sun-gaze) * 0.55)) 0%,
+      hsla(40, 100%, 88%, calc(var(--sun-gaze) * 0.18)) 30%,
+      transparent 70%
+    ),
+    /* user-driven warmth offset */
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, transparent, #ffaa55 calc(max(var(--wallpaper-warm) * 1, 0) * 30%)) 0%,
+      transparent 100%
+    ),
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, transparent, #88aaff calc(max(var(--wallpaper-warm) * -1, 0) * 30%)) 0%,
+      transparent 100%
+    ),
+    /* sun glow inside the phone (echoes outside sun position) */
+    radial-gradient(
+      70% 55% at calc(var(--sun-x) * 0.6 + 20%) calc(var(--sun-y) * 0.6 + 20%),
+      rgba(255, 240, 215, calc(0.55 * var(--glow))) 0%,
+      transparent 65%
+    ),
+    radial-gradient(
+      100% 60% at 50% 110%,
+      color-mix(in srgb, var(--background-end), transparent 40%) 0%,
+      transparent 70%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.screen-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.18)) 0%,
+    transparent 25%,
+    transparent 60%,
+    rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.08)) 100%
+  );
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 6;
+}
+
+/* ── Status bar ─────────────────────────────────────────────────────────── */
+
+.status-bar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(28, 22, 18, calc(0.78 * var(--ambient-contrast)));
+  letter-spacing: 0.01em;
+}
+.status-time { font-variant-numeric: tabular-nums; }
+.dynamic-island {
+  width: 88px;
+  height: 28px;
+  background: #0a0b0e;
+  border-radius: 999px;
+  margin-top: 2px;
+  box-shadow:
+    inset 0 0 0 1px rgba(40, 42, 48, 0.9),
+    0 1px 2px rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.12));
+}
+.status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(28, 22, 18, calc(0.78 * var(--ambient-contrast)));
+}
+
+/* ── Home screen ────────────────────────────────────────────────────────── */
+
+.home {
+  position: relative;
+  z-index: 4;
+  height: calc(100% - 32px);
+  /* The screen has a 38px corner radius — at the bottom corners the curve
+   * eats into the visible area. Sides see ~20px of effective gap; bottom
+   * needs ~36px raw padding to give the dock a *visually* matching gap
+   * above the curve. */
+  padding: 22px 20px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tile-gap);
+  filter: saturate(var(--saturation));
+}
+
+.widgets {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: var(--tile-gap);
+}
+
+/* ── Widgets ────────────────────────────────────────────────────────────── */
+
+.widget {
+  border-radius: calc(28px * var(--corner-radius));
+  padding: 18px;
+  background-color: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--surface-tint), white 38%),
+    transparent calc(100% - var(--surface-opacity) * 1%)
+  );
+  color: rgba(28, 22, 18, calc(0.85 * var(--ambient-contrast)));
+}
+.widget--weather {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 158px;
+}
+.widget-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(28, 22, 18, calc(0.5 * var(--ambient-contrast)));
+}
+.weather-glyph {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f5e2a8 0%, #e6c272 70%, #c89e44 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.7)),
+    0 2px 6px rgba(140, 90, 30, calc(0.2 * var(--ambient-contrast)));
+}
+.widget-temp {
+  font-family: "Kalice", Georgia, "Times New Roman", serif;
+  font-size: 48px;
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: rgba(28, 22, 18, calc(0.92 * var(--ambient-contrast)));
+  margin-top: auto;
+}
+.widget-meta {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(28, 22, 18, calc(0.5 * var(--ambient-contrast)));
+  letter-spacing: 0.02em;
+}
+
+.widget--clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 158px;
+  padding: 14px;
+}
+.clock-face {
+  /* Ticks + hands sit directly on the widget surface — no inset disc. */
+  position: relative;
+  width: 110px;
+  height: 110px;
+}
+.tick {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 1px;
+  height: 5px;
+  background: rgba(28, 22, 18, calc(0.4 * var(--ambient-contrast)));
+  transform-origin: 50% 51px;
+  margin-left: -0.5px;
+}
+.tick-major { width: 1.5px; height: 7px; background: rgba(28, 22, 18, calc(0.7 * var(--ambient-contrast))); }
+.hand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(28, 22, 18, calc(0.85 * var(--ambient-contrast)));
+  transform-origin: 50% 100%;
+  border-radius: 2px;
+}
+.hand--hour   { width: 2.5px; height: 30px; }
+.hand--minute { width: 1.5px; height: 44px; opacity: 0.85; }
+.clock-pivot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  background: rgba(28, 22, 18, 0.9);
+  border-radius: 50%;
+}
+
+/* ── App icon grid ──────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--tile-gap);
+}
+
+.tile {
+  aspect-ratio: 1 / 1;
+  border-radius: calc(20px * var(--corner-radius));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tile .glyph,
+.dock-tile .glyph {
+  width: 56%;
+  height: 56%;
+  opacity: var(--glyph-weight);
+}
+
+/* Tile tint variants — translucent fill blends the underlying wallpaper.
+ * Each variant resolves the tinted color, then mixes with transparent based
+ * on --surface-opacity so the wallpaper shows through.
+ *
+ * Specificity matters here: every variant uses the .tile.tile--xxx form so
+ * it consistently beats the base .tile rule regardless of source order.
+ */
+.tile.tile--cream, .dock-tile.tile--cream {
+  background-color: color-mix(in srgb, color-mix(in srgb, var(--surface-tint), white 42%), transparent calc(100% - var(--surface-opacity) * 1%));
+}
+.tile.tile--mist, .dock-tile.tile--mist {
+  background-color: color-mix(in srgb, color-mix(in srgb, var(--surface-tint), #c8d6e0 38%), transparent calc(100% - var(--surface-opacity) * 1%));
+  color: rgba(38, 50, 70, calc(0.78 * var(--ambient-contrast)));
+}
+.tile.tile--sage {
+  background-color: color-mix(in srgb, color-mix(in srgb, var(--surface-tint), #b8c9a8 32%), transparent calc(100% - var(--surface-opacity) * 1%));
+  color: rgba(48, 62, 42, calc(0.78 * var(--ambient-contrast)));
+}
+.tile.tile--sand {
+  background-color: color-mix(in srgb, color-mix(in srgb, var(--surface-tint), #f0d59c 32%), transparent calc(100% - var(--surface-opacity) * 1%));
+  color: rgba(78, 56, 18, calc(0.78 * var(--ambient-contrast)));
+}
+.tile.tile--blue, .dock-tile.tile--blue {
+  background-color: color-mix(in srgb, color-mix(in srgb, var(--surface-tint), #b9c9d8 50%), transparent calc(100% - var(--surface-opacity) * 1%));
+  color: rgba(38, 60, 88, calc(0.78 * var(--ambient-contrast)));
+}
+.tile.tile--stone {
+  background-color: color-mix(in srgb, color-mix(in srgb, var(--surface-tint), #cdcdc6 32%), transparent calc(100% - var(--surface-opacity) * 1%));
+  color: rgba(50, 48, 42, calc(0.78 * var(--ambient-contrast)));
+}
+
+/* ── Page dots & dock ───────────────────────────────────────────────────── */
+
+.page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(28, 22, 18, calc(0.25 * var(--ambient-contrast)));
+}
+.dot--active { background: rgba(28, 22, 18, calc(0.65 * var(--ambient-contrast))); }
+
+.dock {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: calc(var(--tile-gap) * 0.85);
+  padding: 12px;
+  border-radius: calc(30px * var(--corner-radius));
+  background-color: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--surface-tint), white 30%),
+    transparent calc(100% - var(--surface-opacity) * 0.95%)
+  );
+}
+
+.dock-tile {
+  aspect-ratio: 1 / 1;
+  border-radius: calc(18px * var(--corner-radius));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(28, 22, 18, calc(0.78 * var(--ambient-contrast)));
+}
+
+/* ── TrueShadow elevation ───────────────────────────────────────────────── */
+
+/* Each .elevated surface is a physical slab. It has:
+ *   • a top face (the element itself),
+ *   • a stack of side-wall slices in the shadow direction (depth),
+ *   • a contact shadow at the base of the slab,
+ *   • a primary and a long secondary cast shadow originating from the bottom
+ *     of the slab (so the shadow follows the depth, not the top face),
+ *   • a top-edge highlight where the slab's edge catches sky light,
+ *   • optional inner pillow shading for a convex cushion feel.
+ *
+ * --_s controls cast-shadow scale per tier.
+ * --_dep controls depth scale per tier (smaller tiles read better with
+ * slightly thinner slabs).
+ */
+.elevated {
+  --_s: 0.5;
+  --_dep: 1;
+
+  /* Slab thickness — applied in BOTH modes so the depth slider always shows
+   * the tile's z-axis height. Mode-specific behavior (whether the cast
+   * shadow is offset by the slab in floating, or projects flat from the
+   * slab base in sitting) is handled per-layer below. */
+  --_dx: calc(var(--depth-dir-x) * var(--depth-px) * var(--_dep));
+  --_dy: calc(var(--depth-dir-y) * var(--depth-px) * var(--_dep));
+
+  /* Side walls are the SAME material as the top face — they're just darker
+   * because less light reaches them. The amount of darkening responds to
+   * the live lighting:
+   *   • --shadow-opacity drives base contrast (strong directional sun =
+   *     more difference between top and side; cloudy = subtle).
+   *   • --sun-gaze fills the side shadow in: when the phone faces the
+   *     sun, light wraps around and the walls get nearly as bright as
+   *     the top face.
+   * Each slice steps slightly deeper into the gradient so the slab fakes
+   * an ambient-occlusion falloff toward its base. */
+  --_wall-base: calc(
+    (var(--shadow-opacity) * 55 + 3) * 1% *
+    (1 - var(--sun-gaze) * 0.6)
+  );
+
+  --_wall-1: color-mix(in srgb, var(--surface-tint), var(--shadow-tint) calc(var(--_wall-base) * 0.25));
+  --_wall-2: color-mix(in srgb, var(--surface-tint), var(--shadow-tint) calc(var(--_wall-base) * 0.55));
+  --_wall-3: color-mix(in srgb, var(--surface-tint), var(--shadow-tint) calc(var(--_wall-base) * 0.85));
+  --_wall-4: color-mix(in srgb, var(--surface-tint), var(--shadow-tint) calc(var(--_wall-base) * 1.20));
+
+  /* Soft cast colors fade out in sitting mode (multiplied by --floating-mul).
+   * The flat long-shadow stack below takes over when the tile is sitting. */
+  --_cast:        color-mix(in srgb, var(--shadow-tint), transparent calc(100% - var(--shadow-opacity) * 100% * var(--shadow-reach-mul) * var(--floating-mul)));
+  --_cast-soft:   color-mix(in srgb, var(--shadow-tint), transparent calc(100% - var(--shadow-opacity) * 55% * var(--floating-mul)));
+  --_cast-contact:color-mix(in srgb, var(--shadow-tint), transparent calc(100% - var(--shadow-opacity) * 35% * var(--shadow-contact-mul) * var(--floating-mul)));
+
+  /* Sitting-mode flat long shadow color. Each layer in the stack below has
+   * a small alpha; their overlap fills the trail. Per-layer alpha is kept
+   * low so the cumulative trail darkness matches floating mode (whose
+   * heavy blur naturally distributes the cast over a wider area). */
+  --_flat: color-mix(in srgb, var(--shadow-tint), transparent calc(100% - var(--shadow-opacity) * 4% * (1 - var(--floating-mul))));
+
+  /* Flat-shadow direction vector — natural light direction scaled by depth
+   * (so depth=0 → no projection) AND by Reach (so the Reach slider extends
+   * or shortens the trail). At depth=0 the tile is flush with the
+   * wallpaper and casts no projected shadow. */
+  --_fdx: calc(var(--shadow-x) * var(--depth-scale) * var(--shadow-reach-mul));
+  --_fdy: calc(var(--shadow-y) * var(--depth-scale) * var(--shadow-reach-mul));
+
+  /* Per-layer blur for the flat shadow. Stays small so the trail keeps a
+   * crisp, flat-design quality by default, but Softness and Distance both
+   * feed into --shadow-blur, so cranking either softens the trail edges. */
+  --_fblur: calc(var(--shadow-blur) * 0.04);
+
+  box-shadow:
+    /* Side-wall stack — 8 slices building up the slab's thickness. Each
+     * slice is shifted down by --slab-offset so the user can pull the slab
+     * out from directly under the tile. */
+    calc(var(--_dx) * 0.125) calc(var(--_dy) * 0.125 + var(--slab-offset)) 0 0 var(--_wall-1),
+    calc(var(--_dx) * 0.250) calc(var(--_dy) * 0.250 + var(--slab-offset)) 0 0 var(--_wall-1),
+    calc(var(--_dx) * 0.375) calc(var(--_dy) * 0.375 + var(--slab-offset)) 0 0 var(--_wall-2),
+    calc(var(--_dx) * 0.500) calc(var(--_dy) * 0.500 + var(--slab-offset)) 0 0 var(--_wall-2),
+    calc(var(--_dx) * 0.625) calc(var(--_dy) * 0.625 + var(--slab-offset)) 0 0 var(--_wall-3),
+    calc(var(--_dx) * 0.750) calc(var(--_dy) * 0.750 + var(--slab-offset)) 0 0 var(--_wall-3),
+    calc(var(--_dx) * 0.875) calc(var(--_dy) * 0.875 + var(--slab-offset)) 0 0 var(--_wall-4),
+    calc(var(--_dx) * 1.000) calc(var(--_dy) * 1.000 + var(--slab-offset)) 0 0 var(--_wall-4),
+
+    /* Contact shadow at the base of the slab — fades with floating-mul. */
+    var(--_dx)
+      calc(var(--_dy) + 1px + var(--shadow-distance-drop) * 0.4 + var(--slab-offset))
+      1.5px var(--shadow-spread) var(--_cast-contact),
+
+    /* Primary soft cast — only visible in floating mode.
+     * Depth (-_dy) is amplified here (×2.5) so increasing the Depth slider
+     * visibly raises the tile in z-space: the cast shadow drops further
+     * from the tile and gets blurrier as the tile elevates.
+     * --slab-offset shifts the cast origin to match the slab's new base. */
+    calc(var(--shadow-x) * var(--_s) + var(--_dx))
+      calc(var(--shadow-y) * var(--_s) + var(--_dy) * 2.5 + 1px + var(--shadow-distance-drop) + var(--slab-offset))
+      calc(var(--shadow-blur) * var(--_s) + 1px + var(--depth-px) * 1.6 * var(--floating-mul))
+      var(--shadow-spread) var(--_cast-soft),
+
+    /* Longer secondary soft cast — only visible in floating mode. */
+    calc(var(--shadow-x) * var(--_s) * 2 + var(--_dx))
+      calc(var(--shadow-y) * var(--_s) * 1.7 + var(--_dy) * 3 + 2px + var(--shadow-distance-drop) * 1.4 + var(--slab-offset))
+      calc(var(--shadow-blur) * var(--_s) * 1.6 + 4px + var(--depth-px) * 2.4 * var(--floating-mul))
+      var(--shadow-spread) var(--_cast),
+
+    /* ── Sitting-mode flat long-shadow stack ─────────────────────────────
+     * 25 stacked, no-blur shadows offset progressively in the light
+     * direction. Each layer redraws the tile's silhouette at a tiny
+     * additional offset; their overlap fills in a continuous, hard-edged
+     * extrusion of the tile (a flat-design long shadow). All layers share
+     * the same low-alpha color, so the trail intensity comes from the
+     * accumulated overlap rather than per-layer opacity changes.
+     *
+     * Each layer is anchored at the slab base (--_dx, --_dy), so the long
+     * shadow projects from the bottom of the depth slab — taller tiles
+     * (higher depth) cast shadows further away. The light-direction
+     * offsets use --_fdx/--_fdy (= light × depth-scale), so depth=0
+     * collapses everything to a single point at the tile and the shadow
+     * disappears.
+     *
+     * The whole stack is invisible in floating mode because --_flat alpha
+     * multiplies by (1 - --floating-mul). */
+    calc(var(--_fdx) * 0.10 + var(--_dx)) calc(var(--_fdy) * 0.10 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.20 + var(--_dx)) calc(var(--_fdy) * 0.20 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.30 + var(--_dx)) calc(var(--_fdy) * 0.30 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.40 + var(--_dx)) calc(var(--_fdy) * 0.40 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.50 + var(--_dx)) calc(var(--_fdy) * 0.50 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.60 + var(--_dx)) calc(var(--_fdy) * 0.60 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.70 + var(--_dx)) calc(var(--_fdy) * 0.70 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.80 + var(--_dx)) calc(var(--_fdy) * 0.80 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.90 + var(--_dx)) calc(var(--_fdy) * 0.90 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.00 + var(--_dx)) calc(var(--_fdy) * 1.00 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.10 + var(--_dx)) calc(var(--_fdy) * 1.10 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.20 + var(--_dx)) calc(var(--_fdy) * 1.20 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.30 + var(--_dx)) calc(var(--_fdy) * 1.30 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.40 + var(--_dx)) calc(var(--_fdy) * 1.40 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.50 + var(--_dx)) calc(var(--_fdy) * 1.50 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.60 + var(--_dx)) calc(var(--_fdy) * 1.60 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.70 + var(--_dx)) calc(var(--_fdy) * 1.70 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.80 + var(--_dx)) calc(var(--_fdy) * 1.80 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.90 + var(--_dx)) calc(var(--_fdy) * 1.90 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.00 + var(--_dx)) calc(var(--_fdy) * 2.00 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.10 + var(--_dx)) calc(var(--_fdy) * 2.10 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.20 + var(--_dx)) calc(var(--_fdy) * 2.20 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.30 + var(--_dx)) calc(var(--_fdy) * 2.30 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.40 + var(--_dx)) calc(var(--_fdy) * 2.40 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.50 + var(--_dx)) calc(var(--_fdy) * 2.50 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+
+    /* Top edge highlight — corner of the slab catches sky light. */
+    inset 0 1px 0 rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.7 * var(--highlight-mul))),
+
+    /* Directional bevel on the side facing the light. */
+    inset
+      calc(var(--depth-dir-x) * -1.5px)
+      calc(var(--depth-dir-y) * -0.5px)
+      0 0 rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.18 * var(--highlight-mul))),
+
+    /* Liquid-glass at high Sun/Moon gaze. The fill thins to near-transparent
+     * (in App.tsx's --surface-opacity calc), the backdrop refracts the
+     * wallpaper, and three layers add the glass signature.
+     *
+     * The inner glow and outer halo are DIRECTIONAL — they track the gaze
+     * disc's actual screen position via --gaze-dir-x/y (positive X = light
+     * from the left, positive Y = light from above). Inset offset uses the
+     * direction directly (positive Y → top-edge highlight); the outer halo
+     * negates it so it spills into the air on the same light side.
+     * The inner ring stays uniform — it's the structural edge of the
+     * glass tile, visible all around. */
+    inset 0 0 0
+      calc(var(--sun-gaze) * 1.2px)
+      rgba(255, 255, 255, calc(var(--sun-gaze) * 0.85 * var(--highlight-mul))),
+    inset
+      calc(var(--gaze-dir-x) * 14px * var(--sun-gaze))
+      calc(var(--gaze-dir-y) * 14px * var(--sun-gaze))
+      calc(8px + var(--sun-gaze) * 18px)
+      calc(var(--sun-gaze) * 0.6px)
+      rgba(255, 255, 255, calc(var(--sun-gaze) * 0.22 * var(--highlight-mul))),
+    calc(var(--gaze-dir-x) * -14px * var(--sun-gaze))
+      calc(var(--gaze-dir-y) * -14px * var(--sun-gaze))
+      calc(10px + var(--sun-gaze) * 18px)
+      calc(var(--sun-gaze) * 0.6px)
+      rgba(255, 255, 255, calc(var(--sun-gaze) * 0.32 * var(--highlight-mul))),
+
+    /* Pillow — convex inner shadow making the top face feel curved.
+       Light catches the top, fades into a soft shadow at the bottom. */
+    inset 0
+      calc(0.4px + var(--pillow) * 0.05px)
+      calc(0.6px + var(--pillow) * 0.16px)
+      0
+      rgba(255, 255, 255, calc(var(--pillow) * 0.0055 * var(--highlight-mul))),
+    inset 0
+      calc(-0.4px - var(--pillow) * 0.05px)
+      calc(0.6px + var(--pillow) * 0.18px)
+      0
+      rgba(0, 0, 0, calc(var(--pillow) * 0.0035));
+}
+
+/* Every elevated surface uses the same shadow + depth values, regardless of
+ * size. Widgets and icons share the same lighting weight. */
+.elevated.sm,
+.elevated.md,
+.elevated.lg { --_s: 0.55; --_dep: 0.85; }
+
+/* Apply the surface base styles to every elevated tile in the home. */
+.widget, .tile, .dock, .dock-tile {
+  position: relative;
+  /* Translucent fill — wallpaper bleeds through subtly. */
+  backdrop-filter: blur(calc((100 - var(--surface-opacity)) * 0.35px)) saturate(1.05);
+  -webkit-backdrop-filter: blur(calc((100 - var(--surface-opacity)) * 0.35px)) saturate(1.05);
+  overflow: hidden;
+}
+
+/* Top-face material — matte base + variable-strength gloss specular. */
+.widget::before, .tile::before, .dock::before, .dock-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    /* Specular hot-spot — visible at higher gloss. */
+    radial-gradient(
+      ellipse 60% 32% at 22% 14%,
+      rgba(255, 255, 255, calc(var(--gloss) * 0.55 * var(--highlight-mul))) 0%,
+      transparent 70%
+    ),
+    /* Base matte highlight from the sky. */
+    linear-gradient(
+      170deg,
+      rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.32 * var(--highlight-mul))) 0%,
+      transparent 42%,
+      transparent 68%,
+      rgba(0, 0, 0, calc(var(--shadow-opacity) * 0.14)) 100%
+    );
+  z-index: 1;
+}
+.widget > *, .tile > *, .dock > *, .dock-tile > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Right column ───────────────────────────────────────────────────────── */
+
+.panel {
+  /* Cap at the row height so the panel never pushes the row taller (which
+   * would shove the phone off-center), but only as tall as its content
+   * otherwise — no empty space when the advanced section is closed. */
+  max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: #f4ece2;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #06070b, transparent 25%),
+    color-mix(in srgb, #06070b, transparent 50%)
+  );
+  padding: 28px 26px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* Scrollbar styling — Firefox + WebKit. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scroll-behavior: smooth;
+}
+.panel::-webkit-scrollbar {
+  width: 6px;
+}
+.panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+.panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 1100px) {
+  .panel {
+    align-self: auto;
+    overflow-y: visible;
+  }
+}
+
+/* ── About pill (top-right of page) ─────────────────────────────────────── */
+
+.about-pill {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  color: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 220ms ease, border-color 220ms ease, transform 220ms ease;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.about-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.about-pill:active { transform: scale(0.97); }
+.about-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0%, #f6c684 60%, #c47424 100%);
+  box-shadow: 0 0 12px rgba(255, 200, 130, 0.6);
+}
+
+/* ── About overlay & card ───────────────────────────────────────────────── */
+
+.about-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(8, 8, 14, 0.55);
+  backdrop-filter: blur(24px) saturate(1.15);
+  -webkit-backdrop-filter: blur(24px) saturate(1.15);
+  animation: fade-in 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.about-card {
+  position: relative;
+  max-width: 560px;
+  width: 100%;
+  padding: 44px 44px 38px;
+  border-radius: 28px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(36px) saturate(1.4);
+  -webkit-backdrop-filter: blur(36px) saturate(1.4);
+  color: #f4ece2;
+  box-shadow:
+    0 50px 120px rgba(0, 0, 0, 0.65),
+    0 12px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  animation: about-rise 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes about-rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.about-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.about-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.about-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(244, 236, 226, 0.8);
+  margin-bottom: 22px;
+}
+.brand-mark.soft { color: rgba(244, 236, 226, 0.55); }
+.brand-sep { color: rgba(244, 236, 226, 0.35); }
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0%, #f6c684 60%, #c47424 100%);
+  box-shadow: 0 0 12px rgba(255, 200, 130, 0.7);
+}
+
+.about-title {
+  font-family: "Kalice", Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.18;
+  letter-spacing: -0.012em;
+  color: #fbf4e7;
+  margin: 0 0 14px;
+}
+.about-tag {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(244, 236, 226, 0.55);
+  font-style: italic;
+  margin: 0;
+}
+.about-divider {
+  height: 1px;
+  margin: 24px 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.14) 30%,
+    rgba(255, 255, 255, 0.14) 70%,
+    transparent
+  );
+}
+.about-body {
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: rgba(244, 236, 226, 0.82);
+  margin: 0 0 14px;
+}
+.about-body:last-child { margin-bottom: 0; }
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.preset {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(244, 236, 226, 0.9);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+.preset:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.preset:active { transform: scale(0.97); }
+
+.slider {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.slider-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.slider-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(244, 236, 226, 0.85);
+  letter-spacing: 0.02em;
+}
+.slider-value {
+  font-family: "Kalice", Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  color: rgba(244, 236, 226, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+.slider-value-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.slider-reset {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(244, 236, 226, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease,
+    transform 200ms ease;
+}
+.slider-reset:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(244, 236, 226, 0.95);
+}
+.slider-reset:active {
+  transform: scale(0.9);
+}
+
+/* ── Switch ─────────────────────────────────────────────────────────────── */
+
+.switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 220ms ease, border-color 220ms ease;
+}
+.switch:hover { border-color: rgba(255, 255, 255, 0.16); }
+.switch--on {
+  background: rgba(255, 198, 130, 0.55);
+  border-color: rgba(255, 198, 130, 0.7);
+}
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff8ec;
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.switch--on .switch-thumb { transform: translateX(16px); }
+
+/* ── Gaze section ───────────────────────────────────────────────────────── */
+
+.gaze-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.gaze-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gaze-section-title {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(244, 236, 226, 0.92);
+}
+.gaze-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+  animation: gaze-body-in 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes gaze-body-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Segmented toggle ───────────────────────────────────────────────────── */
+
+.segmented-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.segmented-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(244, 236, 226, 0.85);
+  letter-spacing: 0.02em;
+}
+.segmented {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+}
+.segmented-option {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: rgba(244, 236, 226, 0.55);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 7px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+}
+.segmented-option:hover:not(.active) {
+  color: rgba(244, 236, 226, 0.85);
+}
+.segmented-option:active {
+  transform: scale(0.97);
+}
+.segmented-option.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(244, 236, 226, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 220, 170, 0.85) 0 var(--slider-pct, 50%),
+    rgba(255, 255, 255, 0.1) var(--slider-pct, 50%) 100%
+  );
+}
+input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+input[type="range"]::-moz-range-progress {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 220, 170, 0.85);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff8ec;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border: none;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff8ec;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Advanced (collapsible) ─────────────────────────────────────────────── */
+
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  color: rgba(244, 236, 226, 0.92);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.advanced-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.advanced-toggle-label { flex: 1; text-align: left; }
+.advanced-toggle-meta {
+  font-size: 11px;
+  color: rgba(244, 236, 226, 0.5);
+  letter-spacing: 0.04em;
+}
+.advanced-toggle-arrow {
+  color: rgba(244, 236, 226, 0.55);
+  transition: transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.advanced-toggle.open .advanced-toggle-arrow { transform: rotate(180deg); }
+
+.advanced-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 16px;
+  margin-top: -4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+  animation: advanced-in 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes advanced-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Debug readout ──────────────────────────────────────────────────────── */
+
+.debug {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: rgba(244, 236, 226, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.debug-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+.debug-label {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(244, 236, 226, 0.4);
+}
+.debug-value {
+  color: rgba(244, 236, 226, 0.85);
+  font-family: "Kalice", Georgia, "Times New Roman", serif;
+  font-size: 13px;
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SolOS / TrueShadow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Kalice — locally installed serif. The user has it on their machine,
+       * so we reference it via local() and fall back gracefully if absent. */
+      @font-face {
+        font-family: "Kalice";
+        src:
+          local("Kalice"),
+          local("Kalice-Regular");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Kalice";
+        src:
+          local("Kalice Italic"),
+          local("Kalice-Italic");
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
