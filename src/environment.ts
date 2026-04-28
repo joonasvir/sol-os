@@ -20,6 +20,11 @@ export interface Inputs {
   sunGazeEnabled: boolean;
   sunGazeMode: "sun" | "moon";
   sunGazePosition: number;
+  // Phone heading — 0..360 degrees of rotation around the screen's normal
+  // axis. 0 = the default orientation; rotating the compass effectively
+  // rotates the world relative to the phone, so shadows in the phone's
+  // frame rotate by -compassHeading (CCW for positive headings).
+  compassHeading: number;
   depth: number;            // 0..100 — z-elevation of tiles above wallpaper
   depthOffset: number;      // -10..30 — extra px the slab is offset below the
                             //           tile, so the side walls peek out
@@ -184,6 +189,7 @@ export function computeEnvironment(input: Inputs): Environment {
     sunGazeEnabled,
     sunGazeMode,
     sunGazePosition,
+    compassHeading,
     depthOffset,
   } = input;
   const isDay = hour >= SUNRISE && hour <= SUNSET;
@@ -239,11 +245,16 @@ export function computeEnvironment(input: Inputs): Environment {
   const scaledX = rawShadowX * lengthMul;
   const scaledY = rawShadowY * lengthMul;
 
-  // Angle offset — rotates the resulting shadow direction. Magnitude is
-  // unchanged so length stays consistent.
-  const angleRad = (shadowAngleOffset * Math.PI) / 180;
-  const cosA = Math.cos(angleRad);
-  const sinA = Math.sin(angleRad);
+  // Compass + angle offset combined into a single rotation of the shadow
+  // vector. Compass heading represents the phone's rotation around the
+  // screen normal — when the phone rotates clockwise, the world (and the
+  // sun's bearing) rotates counter-clockwise from the phone's frame, so
+  // we apply CCW rotation by compassHeading degrees. The fine angle-offset
+  // slider is added on top.
+  const totalRotationDeg = compassHeading + shadowAngleOffset;
+  const totalRad = (totalRotationDeg * Math.PI) / 180;
+  const cosA = Math.cos(totalRad);
+  const sinA = Math.sin(totalRad);
   const shadowX = scaledX * cosA - scaledY * sinA;
   const shadowY = scaledX * sinA + scaledY * cosA;
 
@@ -268,9 +279,18 @@ export function computeEnvironment(input: Inputs): Environment {
   const intensityMul = clamp(shadowIntensity / 100, 0, 2);
   // Sun gaze fades cast shadow on the screen — when the phone faces the sun,
   // the sun is in front of the UI, not above it, so it casts almost no shadow
-  // *on* the screen surface. Effective gaze is gated by the master toggle so
-  // the slider can hold its value without affecting anything when off.
-  const gaze = sunGazeEnabled ? clamp(sunGaze / 100, 0, 1) : 0;
+  // *on* the screen surface. Night automatically forces moon gaze on with a
+  // baseline intensity so the night view always reads as glassy moonlight
+  // rather than a saturated dark UI.
+  const isNight = !isDay;
+  const gazeOnByNight = isNight;
+  const gazeActive = sunGazeEnabled || gazeOnByNight;
+  const userGazeFraction = clamp(sunGaze / 100, 0, 1);
+  const gaze = gazeActive
+    ? isNight
+      ? Math.max(userGazeFraction, 0.45)
+      : userGazeFraction
+    : 0;
   const gazeShadowMul = 1 - gaze * 0.7;
   const shadowOpacity = clamp(
     baseOpacity * (1 - cloud * 0.55) * intensityMul * gazeShadowMul,
@@ -390,7 +410,13 @@ export function computeEnvironment(input: Inputs): Environment {
     shadowDistanceDrop: distance * 0.35,
     sunGaze: gaze,
     slabOffset: clamp(depthOffset, -20, 40),
-    ...computeGaze(sunGazeEnabled, sunGazeMode, sunGazePosition),
+    // Night promotes the gaze system to "moon" automatically so the screen
+    // settles into a moonlit glass mood rather than a saturated dark UI.
+    ...computeGaze(
+      gazeActive,
+      isNight ? "moon" : sunGazeMode,
+      sunGazePosition
+    ),
   };
 }
 
@@ -437,6 +463,7 @@ const POSE_BASE = {
   sunGazeEnabled: false,
   sunGazeMode: "sun" as const,
   sunGazePosition: 50,
+  compassHeading: 0,
   depthOffset: 0,
 };
 const SHADOW_BASE = {

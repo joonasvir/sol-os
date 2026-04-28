@@ -4,6 +4,7 @@ import { DEFAULT_STYLE, type Style } from "./style";
 import { Phone } from "./Phone";
 import { Controls } from "./Controls";
 import { About } from "./About";
+import { Compass } from "./Compass";
 
 const DEFAULT: Inputs = {
   hour: 8.5,
@@ -14,6 +15,7 @@ const DEFAULT: Inputs = {
   sunGazeEnabled: false,
   sunGazeMode: "sun",
   sunGazePosition: 30,
+  compassHeading: 0,
   depth: 45,
   depthOffset: 0,
   shadowIntensity: 110,
@@ -115,7 +117,11 @@ export default function App() {
   };
 
   return (
-    <div className="app" style={styleVars}>
+    <div
+      className="app"
+      style={styleVars}
+      data-gaze-mode={env.gazeMode}
+    >
       <div className="sky">
         <div className="sky-haze" />
         <div className="sun-disc" aria-hidden />
@@ -153,6 +159,11 @@ export default function App() {
           />
         </section>
       </main>
+
+      <Compass
+        heading={inputs.compassHeading}
+        onChange={(h) => setInputs({ ...inputs, compassHeading: h })}
+      />
 
       {aboutOpen && <About onClose={() => setAboutOpen(false)} />}
     </div>
