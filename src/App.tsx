@@ -37,6 +37,17 @@ function hexToTriplet(hex: string) {
   return `${r} ${g} ${b}`;
 }
 
+// Perceived luminance (0..1) of a #rrggbb hex color. Used to decide
+// whether overlay UI (compass, etc.) should switch to dark-on-light vs
+// light-on-dark for accessibility on the changing sky background.
+function hexLuminance(hex: string) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 export default function App() {
   const [inputs, setInputs] = useState<Inputs>(DEFAULT);
   const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
@@ -94,9 +105,11 @@ export default function App() {
     // Surface opacity drops dramatically with Sun gaze — at full gaze the
     // tile fill is ~25% opaque, becoming frosted/liquid glass that the
     // wallpaper refracts through (the backdrop-blur scales inversely with
-    // opacity, so this also bumps the refraction).
+    // opacity, so this also bumps the refraction). Night also pulls
+    // opacity way down (env.surfaceFillMul) so widgets read as clear
+    // glass rather than colored cards in low light.
     ["--surface-opacity" as any]: (
-      style.surfaceOpacity * (1 - env.sunGaze * 0.75)
+      style.surfaceOpacity * (1 - env.sunGaze * 0.75) * env.surfaceFillMul
     ).toFixed(2),
     ["--sun-gaze" as any]: env.sunGaze.toFixed(3),
     // Gaze disc (visible behind the phone when enabled) and the light
@@ -116,11 +129,17 @@ export default function App() {
     ["--glyph-weight" as any]: (style.glyphWeight / 100).toFixed(3),
   };
 
+  // Decide whether overlay UI (compass, reset chip) should use light- or
+  // dark-tone foreground based on the sky color where it sits.
+  const bgTone: "light" | "dark" =
+    hexLuminance(env.backgroundEnd) > 0.5 ? "light" : "dark";
+
   return (
     <div
       className="app"
       style={styleVars}
       data-gaze-mode={env.gazeMode}
+      data-bg-tone={bgTone}
     >
       <div className="sky">
         <div className="sky-haze" />

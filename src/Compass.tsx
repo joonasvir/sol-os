@@ -5,8 +5,9 @@ interface Props {
   onChange: (heading: number) => void;
 }
 
-// Minimal compass dial, fixed bottom-left of the page. Drag the needle to
-// rotate the phone's orientation — shadows follow accordingly.
+// Minimal compass dial fixed in the bottom-left. Drag the needle to rotate
+// the phone's heading — every shadow rotates accordingly via a CCW
+// rotation in the environment engine.
 //
 // Convention: heading 0 means "default orientation" (no rotation applied).
 // Increasing heading = phone rotated clockwise; the world (sun) rotates
@@ -14,6 +15,9 @@ interface Props {
 // rotate CCW too. We don't label cardinals (N/E/S/W) because the default
 // orientation isn't tied to a literal compass bearing — the dial just
 // shows the current rotation amount.
+//
+// Adapts to the sky background via [data-bg-tone] on the app root: dark
+// foreground on a light sky, light foreground on a dark sky.
 export function Compass({ heading, onChange }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,35 +49,51 @@ export function Compass({ heading, onChange }: Props) {
     updateFromPointer(e.clientX, e.clientY);
   };
 
+  // Show the reset chip whenever the dial isn't (effectively) at zero.
+  // Small epsilon avoids flicker when dragging near the top.
+  const showReset = heading > 1 && heading < 359;
+
   return (
-    <div
-      ref={ref}
-      className="compass"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      role="slider"
-      aria-label="Phone heading"
-      aria-valuenow={Math.round(heading)}
-      aria-valuemin={0}
-      aria-valuemax={360}
-    >
-      <div className="compass-ring" aria-hidden>
-        <span className="compass-tick compass-tick--top" />
-        <span className="compass-tick compass-tick--right" />
-        <span className="compass-tick compass-tick--bottom" />
-        <span className="compass-tick compass-tick--left" />
-      </div>
+    <div className="compass-wrap">
+      {showReset && (
+        <button
+          type="button"
+          className="compass-reset"
+          onClick={() => onChange(0)}
+          aria-label="Reset compass to default"
+        >
+          Reset
+        </button>
+      )}
       <div
-        className="compass-needle"
-        style={{ transform: `rotate(${heading}deg)` }}
-        aria-hidden
+        ref={ref}
+        className="compass"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        role="slider"
+        aria-label="Phone heading"
+        aria-valuenow={Math.round(heading)}
+        aria-valuemin={0}
+        aria-valuemax={360}
       >
-        <span className="compass-needle-arrow" />
-        <span className="compass-needle-tail" />
-      </div>
-      <div className="compass-center" aria-hidden />
-      <div className="compass-readout" aria-hidden>
-        {Math.round(heading)}°
+        <div className="compass-ring" aria-hidden>
+          <span className="compass-tick compass-tick--top" />
+          <span className="compass-tick compass-tick--right" />
+          <span className="compass-tick compass-tick--bottom" />
+          <span className="compass-tick compass-tick--left" />
+        </div>
+        <div
+          className="compass-needle"
+          style={{ transform: `rotate(${heading}deg)` }}
+          aria-hidden
+        >
+          <span className="compass-needle-arrow" />
+          <span className="compass-needle-tail" />
+        </div>
+        <div className="compass-center" aria-hidden />
+        <div className="compass-readout" aria-hidden>
+          {Math.round(heading)}°
+        </div>
       </div>
     </div>
   );

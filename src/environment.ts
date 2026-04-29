@@ -57,6 +57,10 @@ export interface Environment {
   highlightOpacity: number;
   ambientContrast: number; // 0.6..1.1
   glow: number;            // 0..1, sun glow intensity
+  // Multiplier applied to user's surface-opacity. Drops at night so widgets
+  // read as clear glass (the gaze halo + edge ring provide the structure)
+  // rather than a blue-tinted card.
+  surfaceFillMul: number;  // 0..1
   sunGaze: number;         // 0..1 — effective gaze intensity (0 if disabled)
   gazeEnabled: number;     // 0 or 1 — drives disc visibility
   gazeMode: "sun" | "moon";
@@ -325,7 +329,11 @@ export function computeEnvironment(input: Inputs): Environment {
 
   const warmTone = "#f5d6a8";
   const coolTone = "#cad9e8";
-  const nightTone = "#3a4868";
+  // Night uses a near-neutral warm cream — colorless on its own — so the
+  // night UI reads as transparent glass (the glare and edge ring do the
+  // heavy lifting visually). Removing the old #3a4868 blue stops widgets
+  // from looking dyed at night.
+  const nightTone = "#e9e4d8";
   const surfaceTint = isDay
     ? mix(coolTone, warmTone, surfaceWarmth)
     : nightTone;
@@ -408,6 +416,7 @@ export function computeEnvironment(input: Inputs): Environment {
     shadowContactMul: clamp(shadowContact / 100, 0, 3),
     shadowReachMul: clamp(shadowReach / 100, 0, 3),
     shadowDistanceDrop: distance * 0.35,
+    surfaceFillMul: isNight ? 0.32 : 1,
     sunGaze: gaze,
     slabOffset: clamp(depthOffset, -20, 40),
     // Night promotes the gaze system to "moon" automatically so the screen
