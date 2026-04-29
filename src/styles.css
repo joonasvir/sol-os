@@ -716,21 +716,25 @@ body {
   --_fblur: calc(var(--shadow-blur) * 0.04);
 
   box-shadow:
-    /* Side-wall stack — 8 slices building up the slab's thickness. Each
-     * slice is shifted down by --slab-offset so the user can pull the slab
-     * out from directly under the tile. */
-    calc(var(--_dx) * 0.125) calc(var(--_dy) * 0.125 + var(--slab-offset)) 0 0 var(--_wall-1),
-    calc(var(--_dx) * 0.250) calc(var(--_dy) * 0.250 + var(--slab-offset)) 0 0 var(--_wall-1),
-    calc(var(--_dx) * 0.375) calc(var(--_dy) * 0.375 + var(--slab-offset)) 0 0 var(--_wall-2),
-    calc(var(--_dx) * 0.500) calc(var(--_dy) * 0.500 + var(--slab-offset)) 0 0 var(--_wall-2),
-    calc(var(--_dx) * 0.625) calc(var(--_dy) * 0.625 + var(--slab-offset)) 0 0 var(--_wall-3),
-    calc(var(--_dx) * 0.750) calc(var(--_dy) * 0.750 + var(--slab-offset)) 0 0 var(--_wall-3),
-    calc(var(--_dx) * 0.875) calc(var(--_dy) * 0.875 + var(--slab-offset)) 0 0 var(--_wall-4),
-    calc(var(--_dx) * 1.000) calc(var(--_dy) * 1.000 + var(--slab-offset)) 0 0 var(--_wall-4),
+    /* Side-wall stack — 8 slices distributed across --slab-offset so the
+     * visible slab thickness is *only* what the offset slider pulls out
+     * from beneath the tile. At slab-offset=0 every slice collapses to
+     * (0,0) and sits hidden behind the tile itself. Depth still drives
+     * cast-shadow elevation and the sitting-mode flat-shadow length —
+     * it just no longer adds a visible stripe to the tile. */
+    0 calc(var(--slab-offset) * 0.125) 0 0 var(--_wall-1),
+    0 calc(var(--slab-offset) * 0.250) 0 0 var(--_wall-1),
+    0 calc(var(--slab-offset) * 0.375) 0 0 var(--_wall-2),
+    0 calc(var(--slab-offset) * 0.500) 0 0 var(--_wall-2),
+    0 calc(var(--slab-offset) * 0.625) 0 0 var(--_wall-3),
+    0 calc(var(--slab-offset) * 0.750) 0 0 var(--_wall-3),
+    0 calc(var(--slab-offset) * 0.875) 0 0 var(--_wall-4),
+    0 calc(var(--slab-offset) * 1.000) 0 0 var(--_wall-4),
 
-    /* Contact shadow at the base of the slab — fades with floating-mul. */
-    var(--_dx)
-      calc(var(--_dy) + 1px + var(--shadow-distance-drop) * 0.4 + var(--slab-offset))
+    /* Contact shadow at the base of the visible slab. Anchored at
+     * --slab-offset so it sits flush with the tile when offset=0. */
+    0
+      calc(var(--slab-offset) + 1px + var(--shadow-distance-drop) * 0.4)
       1.5px var(--shadow-spread) var(--_cast-contact),
 
     /* Primary soft cast — only visible in floating mode.
@@ -766,31 +770,31 @@ body {
      *
      * The whole stack is invisible in floating mode because --_flat alpha
      * multiplies by (1 - --floating-mul). */
-    calc(var(--_fdx) * 0.10 + var(--_dx)) calc(var(--_fdy) * 0.10 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.20 + var(--_dx)) calc(var(--_fdy) * 0.20 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.30 + var(--_dx)) calc(var(--_fdy) * 0.30 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.40 + var(--_dx)) calc(var(--_fdy) * 0.40 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.50 + var(--_dx)) calc(var(--_fdy) * 0.50 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.60 + var(--_dx)) calc(var(--_fdy) * 0.60 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.70 + var(--_dx)) calc(var(--_fdy) * 0.70 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.80 + var(--_dx)) calc(var(--_fdy) * 0.80 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 0.90 + var(--_dx)) calc(var(--_fdy) * 0.90 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.00 + var(--_dx)) calc(var(--_fdy) * 1.00 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.10 + var(--_dx)) calc(var(--_fdy) * 1.10 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.20 + var(--_dx)) calc(var(--_fdy) * 1.20 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.30 + var(--_dx)) calc(var(--_fdy) * 1.30 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.40 + var(--_dx)) calc(var(--_fdy) * 1.40 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.50 + var(--_dx)) calc(var(--_fdy) * 1.50 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.60 + var(--_dx)) calc(var(--_fdy) * 1.60 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.70 + var(--_dx)) calc(var(--_fdy) * 1.70 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.80 + var(--_dx)) calc(var(--_fdy) * 1.80 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 1.90 + var(--_dx)) calc(var(--_fdy) * 1.90 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 2.00 + var(--_dx)) calc(var(--_fdy) * 2.00 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 2.10 + var(--_dx)) calc(var(--_fdy) * 2.10 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 2.20 + var(--_dx)) calc(var(--_fdy) * 2.20 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 2.30 + var(--_dx)) calc(var(--_fdy) * 2.30 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 2.40 + var(--_dx)) calc(var(--_fdy) * 2.40 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
-    calc(var(--_fdx) * 2.50 + var(--_dx)) calc(var(--_fdy) * 2.50 + var(--_dy) + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.10) calc(var(--_fdy) * 0.10 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.20) calc(var(--_fdy) * 0.20 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.30) calc(var(--_fdy) * 0.30 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.40) calc(var(--_fdy) * 0.40 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.50) calc(var(--_fdy) * 0.50 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.60) calc(var(--_fdy) * 0.60 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.70) calc(var(--_fdy) * 0.70 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.80) calc(var(--_fdy) * 0.80 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 0.90) calc(var(--_fdy) * 0.90 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.00) calc(var(--_fdy) * 1.00 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.10) calc(var(--_fdy) * 1.10 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.20) calc(var(--_fdy) * 1.20 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.30) calc(var(--_fdy) * 1.30 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.40) calc(var(--_fdy) * 1.40 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.50) calc(var(--_fdy) * 1.50 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.60) calc(var(--_fdy) * 1.60 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.70) calc(var(--_fdy) * 1.70 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.80) calc(var(--_fdy) * 1.80 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 1.90) calc(var(--_fdy) * 1.90 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.00) calc(var(--_fdy) * 2.00 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.10) calc(var(--_fdy) * 2.10 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.20) calc(var(--_fdy) * 2.20 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.30) calc(var(--_fdy) * 2.30 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.40) calc(var(--_fdy) * 2.40 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
+    calc(var(--_fdx) * 2.50) calc(var(--_fdy) * 2.50 + var(--slab-offset)) var(--_fblur) var(--shadow-spread) var(--_flat),
 
     /* Top edge highlight — corner of the slab catches sky light. */
     inset 0 1px 0 rgba(255, 255, 255, calc(var(--highlight-opacity) * 0.7 * var(--highlight-mul))),

@@ -33,5 +33,5 @@ export const DEFAULT_STYLE: Style = {
   wallpaperWarm: 2,
   bezelSheen: 54,
   glyphWeight: 130,
-  surfaceMode: "floating",
+  surfaceMode: "sitting",
 };
