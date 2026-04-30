@@ -4,8 +4,8 @@ import { PRESET_ROWS } from "./environment";
 import type { Style, SurfaceMode } from "./style";
 
 // How fast the time-of-day playhead advances when "play" is on.
-// 0.5 hours per second = a full 24-hour cycle in 48 s.
-const PLAY_SPEED_HOURS_PER_SECOND = 0.5;
+// 1.0 hours per second = a full 24-hour cycle in 24 s.
+const PLAY_SPEED_HOURS_PER_SECOND = 1.0;
 
 interface Props {
   inputs: Inputs;
