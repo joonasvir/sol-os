@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Environment, Inputs } from "./environment";
 import { PRESET_ROWS } from "./environment";
 import type { Style, SurfaceMode } from "./style";
+
+// How fast the time-of-day playhead advances when "play" is on.
+// 0.5 hours per second = a full 24-hour cycle in 48 s.
+const PLAY_SPEED_HOURS_PER_SECOND = 0.5;
 
 interface Props {
   inputs: Inputs;
@@ -28,11 +32,33 @@ export function Controls({
 }: Props) {
   const [shadowOpen, setShadowOpen] = useState(false);
   const [surfaceOpen, setSurfaceOpen] = useState(false);
+  const [timePlaying, setTimePlaying] = useState(false);
 
   const setIn = <K extends keyof Inputs>(k: K, v: Inputs[K]) =>
     onChange({ ...inputs, [k]: v });
   const setSt = <K extends keyof Style>(k: K, v: number) =>
     onStyleChange({ ...style, [k]: v });
+
+  // Mirror inputs into a ref so the rAF tick can read the latest hour
+  // without forcing the effect to restart every frame.
+  const inputsRef = useRef(inputs);
+  inputsRef.current = inputs;
+
+  useEffect(() => {
+    if (!timePlaying) return;
+    let frameId = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
+      const cur = inputsRef.current;
+      const next = (cur.hour + dt * PLAY_SPEED_HOURS_PER_SECOND) % 24;
+      onChange({ ...cur, hour: next });
+      frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [timePlaying, onChange]);
 
   return (
     <div className="controls">
@@ -61,6 +87,41 @@ export function Controls({
         step={0.05}
         format={fmtHour}
         onChange={(v) => setIn("hour", v)}
+        onInteract={() => setTimePlaying(false)}
+        trailing={
+          <div className="time-play-controls" aria-label="Play time">
+            <button
+              type="button"
+              className="time-play-btn"
+              data-active={timePlaying ? "true" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                setTimePlaying(true);
+              }}
+              aria-label="Play time"
+              aria-pressed={timePlaying}
+            >
+              <svg viewBox="0 0 10 10" width="8" height="8" aria-hidden>
+                <polygon points="3,2 8,5 3,8" fill="currentColor" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="time-play-btn"
+              data-active={!timePlaying ? "true" : undefined}
+              onClick={(e) => {
+                e.preventDefault();
+                setTimePlaying(false);
+              }}
+              aria-label="Stop time"
+              aria-pressed={!timePlaying}
+            >
+              <svg viewBox="0 0 10 10" width="8" height="8" aria-hidden>
+                <rect x="3" y="3" width="4" height="4" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+        }
       />
       <Slider
         label="Tilt X"
@@ -464,6 +525,8 @@ interface SliderProps {
   format: (v: number) => string;
   onChange: (v: number) => void;
   resetValue?: number;
+  trailing?: React.ReactNode;
+  onInteract?: () => void;
 }
 
 function Slider({
@@ -475,6 +538,8 @@ function Slider({
   format,
   onChange,
   resetValue,
+  trailing,
+  onInteract,
 }: SliderProps) {
   const pct = ((value - min) / (max - min)) * 100;
   const showReset =
@@ -484,6 +549,7 @@ function Slider({
       <div className="slider-head">
         <span className="slider-label">{label}</span>
         <span className="slider-value-group">
+          {trailing}
           {showReset && (
             <button
               type="button"
@@ -524,6 +590,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
+        onPointerDown={onInteract}
         style={{ ["--slider-pct" as any]: `${pct}%` }}
       />
     </label>

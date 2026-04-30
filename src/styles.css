@@ -1392,6 +1392,41 @@ body {
   transform: scale(0.9);
 }
 
+/* Inline play/stop chips that ride alongside the Time of day value. Same
+ * footprint as .slider-reset so they sit comfortably in the value row.
+ * The chip whose state matches what the user just chose lights up softly. */
+.time-play-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.time-play-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(244, 236, 226, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 200ms ease, border-color 200ms ease,
+    color 200ms ease, transform 200ms ease;
+}
+.time-play-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.20);
+  color: rgba(244, 236, 226, 0.95);
+}
+.time-play-btn:active { transform: scale(0.92); }
+.time-play-btn[data-active="true"] {
+  background: rgba(255, 200, 130, 0.45);
+  border-color: rgba(255, 200, 130, 0.6);
+  color: rgba(20, 14, 8, 0.92);
+}
+
 /* ── Switch ─────────────────────────────────────────────────────────────── */
 
 .switch {
